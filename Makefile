@@ -1,32 +1,41 @@
-SRC := src
-OBJ := obj
-BIN := bin
-EXECUTABLE:= shell
+CC     = gcc
+CFLAGS = -std=c11 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L
+INCS   = -Iinclude
 
-SRCS := $(wildcard $(SRC)/*.c)
-OBJS := $(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(SRCS))
-INCS := -Iinclude/
-DIRS := $(OBJ)/ $(BIN)/
-EXEC := $(BIN)/$(EXECUTABLE)
+# main shell (keep your team's sources; update if your repo uses different ones)
+SHELL_SRCS = src/main.c src/exec.c src/jobs.c src/prompt.c
+SHELL_OBJS = $(SHELL_SRCS:.c=.o)
+SHELL_BIN  = bin/shell
 
-CC := gcc
-CFLAGS := -g -Wall -std=c99 $(INCS)
-LDFLAGS :=
+# Person A sanity harness
+A_SRCS = src/prompt.c src/exec.c src/jobs.c tests/a_tests.c
+A_OBJS = $(A_SRCS:.c=.o)
+A_BIN  = bin/a_tests
 
-all: $(EXEC)
+.PHONY: all run run-a clean
 
-$(EXEC): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(EXEC)
+all: $(SHELL_BIN) $(A_BIN)
 
-$(OBJ)/%.o: $(SRC)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+bin:
+	@mkdir -p bin
 
-run: $(EXEC)
-	$(EXEC)
+# main shell build
+$(SHELL_BIN): $(SHELL_OBJS) | bin
+	$(CC) $(CFLAGS) $(INCS) -o $@ $(SHELL_OBJS)
+
+# Person A harness build
+$(A_BIN): $(A_OBJS) | bin
+	$(CC) $(CFLAGS) $(INCS) -o $@ $(A_OBJS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
+
+# convenience
+run: $(SHELL_BIN)
+	./$(SHELL_BIN)
+
+run-a: $(A_BIN)
+	./$(A_BIN)
 
 clean:
-	rm $(OBJ)/*.o $(EXEC)
-
-$(shell mkdir -p $(DIRS))
-
-.PHONY: run clean all
+	rm -f $(SHELL_OBJS) $(A_OBJS) $(SHELL_BIN) $(A_BIN)
