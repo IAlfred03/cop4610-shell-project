@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "exec.h": "c",
+        "jobs.h": "c"
+    }
+}

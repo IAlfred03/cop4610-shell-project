@@ -9,6 +9,9 @@ extern "C" {
 int parse_line(const char *line, char ***argv_out, int *background_out);
 void free_argv(char **argv);
 
+// helper to join argv back into a string (for debugging)
+char *argv_join(char *const argv[]);
+
 #ifdef __cplusplus
 }
 #endif

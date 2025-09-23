@@ -5,9 +5,9 @@
 #include <ctype.h>
 #include <unistd.h>
 
-#include "prompt.h"
-#include "exec.h"
-#include "jobs.h"
+#include "../include/prompt.h"
+#include "../include/exec.h"
+#include "../include/jobs.h"
 
 static void rstrip(char *s){
     if (!s) return;

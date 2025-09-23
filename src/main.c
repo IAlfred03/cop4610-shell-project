@@ -7,9 +7,10 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "prompt.h"   // A
-#include "exec.h"     // A
-#include "jobs.h"     // A
+#include "../include/prompt.h"   // A
+#include "../include/exec.h"     // A
+#include "../include/jobs.h"     // A
+#include "../include/myparser.h"     // C
 
 /* ---- Person C: provide these ---- */
 // parser.h
@@ -23,24 +24,25 @@
 //      plan.original: original command line (<= 200 chars)
 //      plan.single.argv: NULL-terminated argv for single command
 //      plan.pipe.argvv: array of argv*; plan.pipe.ncmds in {2,3}
-#include "parser.h"
+//#include "parser.h"
 
 // builtins.h
 //  - builtin_execute(const cmd_plan_t *plan)
 //    returns 1 if built-in is "exit" and shell should quit (after A calls jobs_wait_all())
-#include "builtins.h"
+
+//#include "builtins.h"
 
 /* ---- Person B: provide these ---- */
 // path.h
 //  - path_resolve(const char *cmd, char *abs_path, size_t abs_n)
 //    return 0 on success, -1 if not found in $PATH
-#include "path.h"
+//#include "path.h"
 
 // pipeline.h
 //  - pipeline_run(const cmd_plan_t *plan, int background, pid_t *last_pid)
 //    runs 2–3 stage pipeline. If background: do not wait; set *last_pid to last stage PID.
 //    If foreground: wait internally and return 0 when done.
-#include "pipeline.h"
+//#include "pipeline.h"
 
 /* helpers */
 static void rstrip(char *s){
