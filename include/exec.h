@@ -2,13 +2,12 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
-/*
- * Person B:
- * - Pass these fds when you set up redirection or a pipeline.
- * - Use -1 to inherit the shell's current stdio for any stream you don't override.
- * - For pipelines, you’ll dup2() in your own code OR you can just pass the ends
- *   you want the child to inherit via this struct — Person A's code will dup2().
- */
+typedef struct {
+    int  in_fd;       // -1 inherit
+    int  out_fd;      // -1 inherit
+    int  err_fd;      // -1 inherit (reserved; no 2> parsing yet)
+    bool background;  // true = don't wait in launcher
+} exec_opts_t;
 
 typedef struct {
     int in_fd;  
@@ -33,4 +32,5 @@ int run_command(const char *abs_path, char *const argv[],
                 const exec_opts_t *opts, pid_t *out_pid, int *out_status);
 
 /* Convenience wait wrapper for a single foreground child. */
+
 int wait_for_child(pid_t pid, int *out_status);
