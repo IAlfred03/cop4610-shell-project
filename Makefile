@@ -5,7 +5,11 @@ INCS   = -Iinclude
 # Person A sanity harness only
 A_SRCS = src/prompt.c src/exec.c src/jobs.c tests/a_tests.c
 A_OBJS = $(A_SRCS:.c=.o)
+A_OBJS += $(B_SRCS:.c=.o)
 A_BIN  = bin/a_tests
+
+# Person B sources
+B_SRCS = src/parser.c src/builtins.c src/pipeline_exec.c
 
 .PHONY: all run clean shell
 
