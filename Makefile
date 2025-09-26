@@ -5,13 +5,9 @@ INCS   = -Iinclude
 # Person A sanity harness only
 A_SRCS = src/prompt.c src/exec.c src/jobs.c tests/a_tests.c
 A_OBJS = $(A_SRCS:.c=.o)
-A_OBJS += $(B_SRCS:.c=.o)
 A_BIN  = bin/a_tests
 
-# Person B sources
-B_SRCS = src/parser.c src/builtins.c src/pipeline_exec.c
-
-.PHONY: all run clean shell
+.PHONY: all run clean full
 
 # default: build only the harness
 all: $(A_BIN)
@@ -28,9 +24,13 @@ $(A_BIN): $(A_OBJS) | bin
 run: $(A_BIN)
 	./$(A_BIN)
 
-# optional shell build (will still fail until parser.h/builtins.h exist)
-shell:
-	@echo "Shell build disabled until parser.h and builtins.h are present."
+# optional full shell build (enable later when these files exist)
+# FULL_SRCS = $(A_SRCS) src/parser.c src/builtins.c src/pipeline_exec.c
+# FULL_OBJS = $(FULL_SRCS:.c=.o)
+# FULL_BIN  = bin/shell
+# full: $(FULL_BIN)
+# $(FULL_BIN): $(FULL_OBJS) | bin
+# 	$(CC) $(CFLAGS) $(INCS) -o $@ $(FULL_OBJS)
 
 clean:
-	rm -f $(A_OBJS) $(A_BIN)
+	rm -rf $(A_OBJS) $(A_BIN) bin
