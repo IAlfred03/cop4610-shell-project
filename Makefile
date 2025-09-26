@@ -7,6 +7,12 @@ A_SRCS = src/prompt.c src/exec.c src/jobs.c tests/a_tests.c
 A_OBJS = $(A_SRCS:.c=.o)
 A_BIN  = bin/a_tests
 
+# Person B sources + test harness
+B_SRCS      = src/parser.c src/builtins.c src/pipeline_exec.c
+BTEST_SRCS  = tests/b_tests.c
+BTEST_OBJS  = $(BTEST_SRCS:.c=.o)
+BTEST_BIN   = bin/b_tests
+
 .PHONY: all run clean full
 
 # default: build only the harness
@@ -18,11 +24,19 @@ bin:
 $(A_BIN): $(A_OBJS) | bin
 	$(CC) $(CFLAGS) $(INCS) -o $@ $(A_OBJS)
 
+# Build Person B test binary (links A launcher + jobs + B code)
+$(BTEST_BIN): $(BTEST_OBJS) $(B_SRCS:.c=.o) src/exec.o src/jobs.o | bin
+	$(CC) $(CFLAGS) $(INCS) -o $@ $^
+
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
 run: $(A_BIN)
 	./$(A_BIN)
+
+.PHONY: btest
+btest: $(BTEST_BIN)
+	./$(BTEST_BIN)
 
 # optional full shell build (enable later when these files exist)
 # FULL_SRCS = $(A_SRCS) src/parser.c src/builtins.c src/pipeline_exec.c
