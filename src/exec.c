@@ -37,3 +37,36 @@ int run_command(const char *abs_path, char *const argv[],
     }
     return wait_for_child(pid, out_status);
 }
+
+int exec_pipeline(const pipeline_t *pl) {
+    if (!pl || pl->nstages == 0) {
+        fprintf(stderr, "exec_pipeline: empty pipeline\n");
+        return -1;
+    }
+
+    // Handle single stage (no pipes)
+    if (pl->nstages == 1) {
+        cmd_t *cmd = &pl->stages[0];
+        pid_t pid = -1;
+        int status = 0;
+
+        // Create an exec_opts_t object and populate it with redirection info
+        exec_opts_t opts = {-1, -1, -1, pl->background};
+        // TODO: Handle redirection by opening files and setting opts.in_fd/out_fd
+        // For now, inherit shell's stdio
+
+        // Call run_command with correct argument type
+        if (run_command(cmd->argv[0], cmd->argv, &opts, &pid, &status) == 0) {
+            if (pl->background && pid > 0) {
+                fprintf(stderr, "[background execution not implemented yet]\n");
+                return 0;
+            }
+            return status;
+        }
+        return -1;
+    }
+
+    // TODO: handle multiple stages (pipeline) if pl->nstages > 1
+    fprintf(stderr, "exec_pipeline: multiple stages not implemented yet\n");
+    return -1;
+}
