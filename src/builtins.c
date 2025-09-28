@@ -1,9 +1,9 @@
-
 #define _POSIX_C_SOURCE 200809L
 #include "builtins.h"
 
 #include <errno.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +23,6 @@ static int bi_cd(char *const argv[]) {
     return 0;
 }
 
-
 static int bi_pwd(char *const argv[]) {
     (void)argv;  // unused
     char buf[PATH_MAX];
@@ -36,14 +35,11 @@ static int bi_pwd(char *const argv[]) {
     return 0;
 }
 
-
 static int bi_exit(char *const argv[]) {
     int code = 0;
     if (argv[1]) {
-    
         code = atoi(argv[1]);
     }
-    
     return 2001 + (code & 0xFF);
 }
 

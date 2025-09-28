@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ---------- small utils ----------
+/* ---------- small utils ---------- */
 static void *xmalloc(size_t n) {
     void *p = malloc(n);
     if (!p) { perror("malloc"); exit(1); }
@@ -21,11 +21,11 @@ static char *xstrdup(const char *s) {
     return p;
 }
 
-// ---------- lexer ----------
+/* ---------- lexer ---------- */
 typedef struct { const char *s; size_t i; } lex_t;
 
-static int l_peekc(lex_t *L) { return L->s[L->i]; }
-static int l_getc (lex_t *L) { return L->s[L->i] ? L->s[L->i++] : '\0'; }
+static int  l_peekc(lex_t *L) { return L->s[L->i]; }
+static int  l_getc (lex_t *L) { return L->s[L->i] ? L->s[L->i++] : '\0'; }
 static void l_skip_ws(lex_t *L) {
     while (isspace((unsigned char)l_peekc(L))) L->i++;
 }
@@ -36,28 +36,34 @@ static token_t tok_make(token_kind_t k, char *lex) {
 
 static token_t lex_word(lex_t *L) {
     char *buf = NULL; size_t cap = 0, len = 0;
-#define PUT(ch) do{ if(len+1>=cap){cap=cap?cap*2:32; buf=realloc(buf,cap);} buf[len++]=(char)(ch);}while(0)
+#define PUT(ch) do{ if(len+1>=cap){ size_t newcap = cap?cap*2:32; char *nbuf = realloc(buf,newcap); if(!nbuf){ perror("realloc"); free(buf); return tok_make(TK_ERR,NULL);} buf=nbuf; cap=newcap; } buf[len++]=(char)(ch); }while(0)
 
     for (;;) {
         int c = l_peekc(L);
         if (c == '\0' || isspace((unsigned char)c) || c=='<' || c=='>' || c=='|' || c=='&') break;
 
-        if (c == '\\') {           // escape next char outside quotes
-            l_getc(L);
+        if (c == '\\') {           /* escape next char outside quotes */
+            (void)l_getc(L);
             int n = l_getc(L);
             if (n == '\0') break;
             PUT(n);
             continue;
         }
-        if (c == '"' || c == '\'') { // quoted run
-            int quote = l_getc(L);
+
+        if (c == '"' || c == '\'') { /* quoted run */
+            int quote = l_getc(L);   /* consume opening quote */
             for (;;) {
                 int q = l_getc(L);
-                if (q == '\0') { free(buf); return tok_make(TK_ERR, NULL); } // unclosed quote
-                if (q == quote) break;
-                if (q == '\\') { // allow escapes inside quotes as well
+                if (q == '\0') {        /* unclosed quote */
+                    free(buf);
+                    return tok_make(TK_ERR, NULL);
+                }
+                if (q == quote) break;  /* end of quoted run */
+
+                if (q == '\\') {        /* preserve backslash + next char inside quotes */
                     int n = l_getc(L);
                     if (n == '\0') { free(buf); return tok_make(TK_ERR, NULL); }
+                    PUT('\\');
                     PUT(n);
                 } else {
                     PUT(q);
@@ -65,8 +71,11 @@ static token_t lex_word(lex_t *L) {
             }
             continue;
         }
+
+        /* normal character */
         PUT(l_getc(L));
     }
+
     PUT('\0');
     return tok_make(TK_WORD, buf ? buf : xstrdup(""));
 }
@@ -75,22 +84,22 @@ static token_t lex_next(lex_t *L) {
     l_skip_ws(L);
     int c = l_peekc(L);
     if (c == '\0') return tok_make(TK_EOL, NULL);
-    if (c == '<') { l_getc(L); return tok_make(TK_LT,  NULL); }
+    if (c == '<') { (void)l_getc(L); return tok_make(TK_LT,  NULL); }
     if (c == '>') {
-        l_getc(L);
-        if (l_peekc(L) == '>') { l_getc(L); return tok_make(TK_DGT, NULL); }
+        (void)l_getc(L);
+        if (l_peekc(L) == '>') { (void)l_getc(L); return tok_make(TK_DGT, NULL); }
         return tok_make(TK_GT, NULL);
     }
-    if (c == '|') { l_getc(L); return tok_make(TK_BAR, NULL); }
-    if (c == '&') { l_getc(L); return tok_make(TK_AMP, NULL); }
+    if (c == '|') { (void)l_getc(L); return tok_make(TK_BAR, NULL); }
+    if (c == '&') { (void)l_getc(L); return tok_make(TK_AMP, NULL); }
     return lex_word(L);
 }
 
-// ---------- one-token lookahead parser wrapper ----------
+/* ---------- one-token lookahead parser wrapper ---------- */
 typedef struct {
     lex_t L;
     token_t la;
-    int have_la; // 0 = empty, 1 = la holds a token
+    int have_la; /* 0 = empty, 1 = la holds a token */
 } parser_t;
 
 static void p_init(parser_t *P, const char *s) {
@@ -107,7 +116,7 @@ static token_t p_get(parser_t *P) {
     return t;
 }
 
-// ---------- AST helpers ----------
+/* ---------- AST helpers ---------- */
 static void redir_init(redir_t *r) {
     r->in_path = NULL; r->out_path = NULL; r->append_path = NULL;
 }
@@ -133,8 +142,8 @@ static int set_once(char **slot, const char *path) {
     return 0;
 }
 
-// Parse a single pipeline stage: WORDs and redirections, stopping before |, &, or EOL.
-// Returns 0 on success, nonzero on syntax error. Sets *saw_word if any WORD occurred.
+/* Parse a single pipeline stage: WORDs and redirections, stopping before |, &, or EOL.
+   Returns 0 on success, nonzero on syntax error. Sets *saw_word if any WORD occurred. */
 static int parse_stage(parser_t *P, cmd_t *out, int *saw_word) {
     cmd_init(out);
     *saw_word = 0;
@@ -152,7 +161,7 @@ static int parse_stage(parser_t *P, cmd_t *out, int *saw_word) {
             case TK_LT: {
                 (void)p_get(P);
                 token_t a = p_get(P);
-                if (a.kind != TK_WORD) return -1; // need a path
+                if (a.kind != TK_WORD) return -1; /* need a path */
                 if (set_once(&out->redir.in_path, a.lexeme) < 0) { free(a.lexeme); return -1; }
                 free(a.lexeme);
                 break;
@@ -174,7 +183,7 @@ static int parse_stage(parser_t *P, cmd_t *out, int *saw_word) {
                 break;
             }
 
-            // Stage terminators: do NOT consume; let caller handle
+            /* Stage terminators: do NOT consume; let caller handle */
             case TK_BAR:
             case TK_AMP:
             case TK_EOL:
@@ -198,12 +207,10 @@ int parse_line(const char *line, pipeline_t *out) {
     for (;;) {
         int saw = 0; cmd_t c;
         if (parse_stage(&P, &c, &saw) != 0) goto syntax_err;
+        if (!saw) goto syntax_err; /* empty stage like "|" or blank */
 
-        if (!saw) goto syntax_err; // empty stage like "|" or blank
-
-        // redir conflict: cannot have both > and >>
+        /* redir conflict: cannot have both > and >> */
         if (c.redir.out_path && c.redir.append_path) {
-            // cleanup this stage before failing
             if (c.argv) { for (char **p = c.argv; *p; ++p) free(*p); free(c.argv); }
             free(c.redir.in_path); free(c.redir.out_path); free(c.redir.append_path);
             goto syntax_err;
@@ -213,27 +220,32 @@ int parse_line(const char *line, pipeline_t *out) {
         if (!nv) { perror("realloc"); exit(1); }
         stages = nv; stages[n++] = c;
 
+        // DEBUG: show parsed stage summary
+fprintf(stderr,
+        "[parse] stage=%d argv0=%s argc=%d in=%s out=%s app=%s bg=%d\n",
+        n-1,
+        (c.argv && c.argv[0]) ? c.argv[0] : "(null)",
+        ({ int ac=0; if(c.argv){ while(c.argv[ac]) ac++; } ac; }),
+        c.redir.in_path     ? c.redir.in_path     : "-",
+        c.redir.out_path    ? c.redir.out_path    : "-",
+        c.redir.append_path ? c.redir.append_path : "-",
+        0);
+
         token_t sep = p_peek(&P);
         if (sep.kind == TK_BAR) {
-            (void)p_get(&P);    // consume '|', continue to next stage
+            (void)p_get(&P);    /* consume '|' */
             continue;
         }
         if (sep.kind == TK_AMP) {
-            (void)p_get(&P);    // consume '&'
+            (void)p_get(&P);    /* consume '&' */
             out->background = 1;
             sep = p_peek(&P);
-            if (sep.kind != TK_EOL) {
-                // Any non-EOL after '&' is a syntax error (only trailing & allowed)
-                goto syntax_err;
-            }
+            if (sep.kind != TK_EOL) goto syntax_err; /* only trailing & allowed */
         }
         if (sep.kind == TK_EOL) {
-            // All done
-            break;
+            break;              /* all done */
         }
-
-        // Any other token here is unexpected
-        goto syntax_err;
+        goto syntax_err;        /* unexpected token */
     }
 
     if (n == 0) goto syntax_err;
