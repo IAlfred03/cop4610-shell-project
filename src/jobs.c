@@ -9,8 +9,8 @@
 
 typedef struct {
     int   id;
-    pid_t pid;            /* For pipeline background: PID of the LAST stage */
-    int   active;         /* 1 = active, 0 = free/done */
+    pid_t pid;            /* PID of the last stage of pipeline or single process */
+    int   active;         /* 1 = active, 0 = done/free */
     char  cmd[256];       /* store original command line (<= 200 chars spec) */
 } job_t;
 
@@ -33,8 +33,6 @@ void jobs_register(int job_id, pid_t pid, const char *cmdline){
             JOBS[i].pid = pid;
             JOBS[i].active = 1;
             snprintf(JOBS[i].cmd, sizeof(JOBS[i].cmd), "%s", cmdline ? cmdline : "");
-            printf("[%d] %d\n", job_id, (int)pid);
-            fflush(stdout);
             if (job_id >= next_id) next_id = job_id + 1;
             return;
         }
@@ -57,7 +55,7 @@ void jobs_mark_done_nonblocking(void){
     }
 }
 
-/* Polling loop (signals not required by spec). */
+/* Polling loop for foreground wait (signals not required by spec) */
 void jobs_wait_all(void){
     int any;
     do {
@@ -71,17 +69,17 @@ void jobs_wait_all(void){
             ts.tv_sec = 0;
             ts.tv_nsec = 50 * 1000 * 1000; // 50 ms
             nanosleep(&ts, NULL);
-
         }
     } while (any);
 }
 
+/* Print active background jobs (for 'jobs' builtin) */
 void jobs_print_active(void){
     int any = 0;
     for (int i = 0; i < MAX_JOBS; ++i){
         if (JOBS[i].active){
             any = 1;
-            printf("[%d]+ %d %s\n", JOBS[i].id, (int)JOBS[i].pid, JOBS[i].cmd);
+            printf("[%d] %s\n", JOBS[i].id, JOBS[i].cmd);
         }
     }
     if (!any) {

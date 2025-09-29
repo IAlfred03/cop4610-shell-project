@@ -15,6 +15,20 @@ BTEST_BIN   = bin/b_tests
 
 .PHONY: all run clean full
 
+# Person C sources + test harness
+C_SRCS     = src/parser.c src/builtins.c
+CTEST_SRCS = tests/c_tests.c
+CTEST_OBJS = $(CTEST_SRCS:.c=.o)
+CTEST_BIN  = bin/c_tests
+
+$(CTEST_BIN): $(CTEST_OBJS) $(C_SRCS:.c=.o) src/exec.o src/jobs.o | bin
+	$(CC) $(CFLAGS) $(INCS) -o $@ $^
+
+.PHONY: ctest
+ctest: $(CTEST_BIN)
+	./$(CTEST_BIN)
+
+
 # default: build only the harness
 all: $(A_BIN)
 

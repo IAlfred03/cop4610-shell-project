@@ -21,7 +21,14 @@ static char *xstrdup(const char *s) {
     return p;
 }
 
+
 /* ---------- lexer ---------- */
+
+static void expand_env_vars(cmd_t *cmd);
+
+
+// ---------- lexer ----------
+
 typedef struct { const char *s; size_t i; } lex_t;
 
 static int  l_peekc(lex_t *L) { return L->s[L->i]; }
@@ -200,25 +207,40 @@ int parse_line(const char *line, pipeline_t *out) {
     if (!line || !out) return -1;
     memset(out, 0, sizeof(*out));
 
-    parser_t P; p_init(&P, line);
+    parser_t P; 
+    p_init(&P, line);
 
-    cmd_t *stages = NULL; int n = 0;
+    cmd_t *stages = NULL; 
+    int n = 0;
 
     for (;;) {
-        int saw = 0; cmd_t c;
+        int saw = 0; 
+        cmd_t c;
         if (parse_stage(&P, &c, &saw) != 0) goto syntax_err;
         if (!saw) goto syntax_err; /* empty stage like "|" or blank */
 
         /* redir conflict: cannot have both > and >> */
         if (c.redir.out_path && c.redir.append_path) {
+
             if (c.argv) { for (char **p = c.argv; *p; ++p) free(*p); free(c.argv); }
             free(c.redir.in_path); free(c.redir.out_path); free(c.redir.append_path);
+
+            // cleanup this stage before failing
+            if (c.argv) { 
+                for (char **p = c.argv; *p; ++p) free(*p); 
+                free(c.argv); 
+            }
+            free(c.redir.in_path); 
+            free(c.redir.out_path); 
+            free(c.redir.append_path);
+
             goto syntax_err;
         }
 
         cmd_t *nv = realloc(stages, sizeof(cmd_t) * (n + 1));
         if (!nv) { perror("realloc"); exit(1); }
-        stages = nv; stages[n++] = c;
+        stages = nv; 
+        stages[n++] = c;
 
         // DEBUG: show parsed stage summary
 fprintf(stderr,
@@ -250,6 +272,11 @@ fprintf(stderr,
 
     if (n == 0) goto syntax_err;
 
+    // ✅ Apply environment variable expansion
+    for (int i = 0; i < n; i++) {
+        expand_env_vars(&stages[i]);
+    }
+
     out->stages = stages;
     out->nstages = n;
     return 0;
@@ -257,7 +284,10 @@ fprintf(stderr,
 syntax_err:
     if (stages) {
         for (int i = 0; i < n; ++i) {
-            if (stages[i].argv) { for (char **p = stages[i].argv; *p; ++p) free(*p); free(stages[i].argv); }
+            if (stages[i].argv) { 
+                for (char **p = stages[i].argv; *p; ++p) free(*p); 
+                free(stages[i].argv); 
+            }
             free(stages[i].redir.in_path);
             free(stages[i].redir.out_path);
             free(stages[i].redir.append_path);
@@ -267,6 +297,7 @@ syntax_err:
     memset(out, 0, sizeof(*out));
     return -1;
 }
+
 
 void free_pipeline(pipeline_t *pl) {
     if (!pl || !pl->stages) return;
@@ -293,4 +324,43 @@ char *argv_join(char *const argv[]) {
         if (argv[i+1]) strcat(s, " ");
     }
     return s;
+}
+
+static char *expand_env_token(const char *token) {
+    char buffer[1024] = {0};
+    size_t pos = 0;
+
+    for (size_t i = 0; token[i]; ) {
+        if (token[i] == '$') {
+            i++;
+            size_t start = i;
+            while ((token[i] >= 'A' && token[i] <= 'Z') ||
+                   (token[i] >= 'a' && token[i] <= 'z') ||
+                   (token[i] >= '0' && token[i] <= '9') ||
+                   token[i] == '_') {
+                i++;
+            }
+            char varname[64];
+            strncpy(varname, token + start, i - start);
+            varname[i - start] = '\0';
+
+            const char *val = getenv(varname);
+            if (!val && strcmp(varname,"USER")==0) val=getenv("USERNAME");
+            if (!val) val = "";
+            pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%s", val);
+        } else {
+            buffer[pos++] = token[i++];
+        }
+    }
+    buffer[pos] = '\0';
+    return strdup(buffer);
+}
+
+// Apply expansion to every argv entry in a command
+static void expand_env_vars(cmd_t *cmd) {
+    for (int i = 0; cmd->argv[i] != NULL; i++) {
+        char *expanded = expand_env_token(cmd->argv[i]);
+        // Don’t free old argv[i], just overwrite safely
+        cmd->argv[i] = expanded;
+    }
 }
