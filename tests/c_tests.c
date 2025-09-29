@@ -27,7 +27,8 @@ static int test_env_expansion(void) {
     if (!user) user = "unknown";
     char expect[256]; snprintf(expect, sizeof(expect), "%s\n", user);
 
-    system("mkdir -p tests/tmp");
+    int rc = system("mkdir -p tests/tmp");
+    (void)rc;
     if (run_line("echo $USER > tests/tmp/env.txt") != 0) return 1;
 
     FILE *f = fopen("tests/tmp/env.txt","rb");
@@ -41,7 +42,8 @@ static int test_tilde_expansion(void) {
     char *home = getenv("HOME");
     if (!home) return 1;
 
-    system("mkdir -p tests/tmp");
+    int rc = system("mkdir -p tests/tmp");
+    (void)rc;
     if (run_line("echo ~/ > tests/tmp/tilde.txt") != 0) return 1;
 
     FILE *f = fopen("tests/tmp/tilde.txt","rb");

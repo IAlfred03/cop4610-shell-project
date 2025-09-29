@@ -104,7 +104,8 @@ static int test_builtin_cd_pwd(void){
     int ok = (cwd[0] == '/');
 
     /* IMPORTANT: restore working directory so later tests use project-relative paths */
-    (void)chdir(orig);
+    int rc = chdir(orig);
+    (void)rc;
     return ok ? 0 : 1;
 }
 

@@ -21,13 +21,10 @@ static char *xstrdup(const char *s) {
     return p;
 }
 
-
-/* ---------- lexer ---------- */
-
+/* forward decl */
 static void expand_env_vars(cmd_t *cmd);
 
-
-// ---------- lexer ----------
+/* ---------- lexer ---------- */
 
 typedef struct { const char *s; size_t i; } lex_t;
 
@@ -43,7 +40,15 @@ static token_t tok_make(token_kind_t k, char *lex) {
 
 static token_t lex_word(lex_t *L) {
     char *buf = NULL; size_t cap = 0, len = 0;
-#define PUT(ch) do{ if(len+1>=cap){ size_t newcap = cap?cap*2:32; char *nbuf = realloc(buf,newcap); if(!nbuf){ perror("realloc"); free(buf); return tok_make(TK_ERR,NULL);} buf=nbuf; cap=newcap; } buf[len++]=(char)(ch); }while(0)
+#define PUT(ch) do { \
+    if (len + 1 >= cap) { \
+        size_t newcap = cap ? cap * 2 : 32; \
+        char *nbuf = (char *)realloc(buf, newcap); \
+        if (!nbuf) { perror("realloc"); free(buf); return tok_make(TK_ERR, NULL); } \
+        buf = nbuf; cap = newcap; \
+    } \
+    buf[len++] = (char)(ch); \
+} while (0)
 
     for (;;) {
         int c = l_peekc(L);
@@ -135,7 +140,7 @@ static void cmd_init(cmd_t *c) {
 static int push_arg(cmd_t *c, const char *w) {
     size_t n = 0;
     if (c->argv) { while (c->argv[n]) n++; }
-    char **nv = xmalloc(sizeof(char*) * (n + 2));
+    char **nv = (char **)xmalloc(sizeof(char*) * (n + 2));
     for (size_t i = 0; i < n; ++i) nv[i] = c->argv[i];
     nv[n] = xstrdup(w);
     nv[n+1] = NULL;
@@ -207,51 +212,46 @@ int parse_line(const char *line, pipeline_t *out) {
     if (!line || !out) return -1;
     memset(out, 0, sizeof(*out));
 
-    parser_t P; 
+    parser_t P;
     p_init(&P, line);
 
-    cmd_t *stages = NULL; 
+    cmd_t *stages = NULL;
     int n = 0;
 
     for (;;) {
-        int saw = 0; 
+        int saw = 0;
         cmd_t c;
         if (parse_stage(&P, &c, &saw) != 0) goto syntax_err;
         if (!saw) goto syntax_err; /* empty stage like "|" or blank */
 
         /* redir conflict: cannot have both > and >> */
         if (c.redir.out_path && c.redir.append_path) {
-
-            if (c.argv) { for (char **p = c.argv; *p; ++p) free(*p); free(c.argv); }
-            free(c.redir.in_path); free(c.redir.out_path); free(c.redir.append_path);
-
-            // cleanup this stage before failing
-            if (c.argv) { 
-                for (char **p = c.argv; *p; ++p) free(*p); 
-                free(c.argv); 
+            if (c.argv) {
+                for (char **p = c.argv; *p; ++p) free(*p);
+                free(c.argv);
+                c.argv = NULL;
             }
-            free(c.redir.in_path); 
-            free(c.redir.out_path); 
-            free(c.redir.append_path);
-
+            free(c.redir.in_path);     c.redir.in_path = NULL;
+            free(c.redir.out_path);    c.redir.out_path = NULL;
+            free(c.redir.append_path); c.redir.append_path = NULL;
             goto syntax_err;
         }
 
-        cmd_t *nv = realloc(stages, sizeof(cmd_t) * (n + 1));
+        cmd_t *nv = (cmd_t *)realloc(stages, sizeof(cmd_t) * (n + 1));
         if (!nv) { perror("realloc"); exit(1); }
-        stages = nv; 
+        stages = nv;
         stages[n++] = c;
 
-        // DEBUG: show parsed stage summary
-fprintf(stderr,
-        "[parse] stage=%d argv0=%s argc=%d in=%s out=%s app=%s bg=%d\n",
-        n-1,
-        (c.argv && c.argv[0]) ? c.argv[0] : "(null)",
-        ({ int ac=0; if(c.argv){ while(c.argv[ac]) ac++; } ac; }),
-        c.redir.in_path     ? c.redir.in_path     : "-",
-        c.redir.out_path    ? c.redir.out_path    : "-",
-        c.redir.append_path ? c.redir.append_path : "-",
-        0);
+        /* DEBUG: show parsed stage summary */
+        fprintf(stderr,
+                "[parse] stage=%d argv0=%s argc=%d in=%s out=%s app=%s bg=%d\n",
+                n-1,
+                (c.argv && c.argv[0]) ? c.argv[0] : "(null)",
+                ({ int ac=0; if(c.argv){ while(c.argv[ac]) ac++; } ac; }),
+                c.redir.in_path     ? c.redir.in_path     : "-",
+                c.redir.out_path    ? c.redir.out_path    : "-",
+                c.redir.append_path ? c.redir.append_path : "-",
+                0);
 
         token_t sep = p_peek(&P);
         if (sep.kind == TK_BAR) {
@@ -272,7 +272,7 @@ fprintf(stderr,
 
     if (n == 0) goto syntax_err;
 
-    // ✅ Apply environment variable expansion
+    /* Apply environment variable expansion to argv tokens of every stage */
     for (int i = 0; i < n; i++) {
         expand_env_vars(&stages[i]);
     }
@@ -284,9 +284,9 @@ fprintf(stderr,
 syntax_err:
     if (stages) {
         for (int i = 0; i < n; ++i) {
-            if (stages[i].argv) { 
-                for (char **p = stages[i].argv; *p; ++p) free(*p); 
-                free(stages[i].argv); 
+            if (stages[i].argv) {
+                for (char **p = stages[i].argv; *p; ++p) free(*p);
+                free(stages[i].argv);
             }
             free(stages[i].redir.in_path);
             free(stages[i].redir.out_path);
@@ -297,7 +297,6 @@ syntax_err:
     memset(out, 0, sizeof(*out));
     return -1;
 }
-
 
 void free_pipeline(pipeline_t *pl) {
     if (!pl || !pl->stages) return;
@@ -317,7 +316,7 @@ void free_pipeline(pipeline_t *pl) {
 char *argv_join(char *const argv[]) {
     size_t len = 0;
     for (int i = 0; argv && argv[i]; ++i) len += strlen(argv[i]) + 1;
-    char *s = xmalloc(len + 1);
+    char *s = (char *)xmalloc(len + 1);
     s[0] = '\0';
     for (int i = 0; argv && argv[i]; ++i) {
         strcat(s, argv[i]);
@@ -341,26 +340,31 @@ static char *expand_env_token(const char *token) {
                 i++;
             }
             char varname[64];
-            strncpy(varname, token + start, i - start);
-            varname[i - start] = '\0';
+            size_t vn = i - start;
+            if (vn >= sizeof(varname)) vn = sizeof(varname) - 1;
+            strncpy(varname, token + start, vn);
+            varname[vn] = '\0';
 
             const char *val = getenv(varname);
-            if (!val && strcmp(varname,"USER")==0) val=getenv("USERNAME");
+            if (!val && strcmp(varname,"USER")==0) val = getenv("USERNAME");
             if (!val) val = "";
-            pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%s", val);
+            pos += (size_t)snprintf(buffer + pos, sizeof(buffer) - pos, "%s", val);
+            if (pos >= sizeof(buffer)) { buffer[sizeof(buffer)-1] = '\0'; break; }
         } else {
-            buffer[pos++] = token[i++];
+            if (pos + 1 < sizeof(buffer)) buffer[pos++] = token[i++];
+            else { /* truncate safely */ i++; }
         }
     }
     buffer[pos] = '\0';
-    return strdup(buffer);
+    return xstrdup(buffer);
 }
 
-// Apply expansion to every argv entry in a command
+/* Apply expansion to every argv entry in a command (free old token) */
 static void expand_env_vars(cmd_t *cmd) {
+    if (!cmd || !cmd->argv) return;
     for (int i = 0; cmd->argv[i] != NULL; i++) {
         char *expanded = expand_env_token(cmd->argv[i]);
-        // Don’t free old argv[i], just overwrite safely
+        free(cmd->argv[i]);
         cmd->argv[i] = expanded;
     }
 }
