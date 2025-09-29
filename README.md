@@ -8,133 +8,95 @@
 - **Isaiah Alfred**: ab19@fsu.edu
 ## Division of Labor
 
-### Part 1: Prompt
-- **Responsibilities**: [Description]
-- **Assigned to**: Isaiah Alfred, Derrick Larkins
+## Division of Labor
+- **Isaiah Alfred**: Implemented `pipeline_exec.c`, `exec.c`, redirection handling, and tilde/env expansion.  
+- **Derrick Larkins**: Worked on `parser.c`, `lexer.c`, and `prompt.c`.  
+- **Carter Mason**: Built `builtins.c`, `jobs.c`, and integrated `Makefile` + testing harness.  
 
-### Part 2: Environment Variables
-- **Responsibilities**: [Description]
-- **Assigned to**: Derrick Larkins, Carter Mason
-
-### Part 3: Tilde Expansion
-- **Responsibilities**: [Description]
-- **Assigned to**: Derrick Larkins, Carter Mason
-
-### Part 4: $PATH Search
-- **Responsibilities**: [Description]
-- **Assigned to**: Isaiah Alfred, Carter Mason
-
-### Part 5: External Command Execution
-- **Responsibilities**: [Description]
-- **Assigned to**: Isaiah Alfred, Carter Mason
-
-### Part 6: I/O Redirection
-- **Responsibilities**: [Description]
-- **Assigned to**: Carter Mason, Isaiah Alfred
-
-### Part 7: Piping
-- **Responsibilities**: [Description]
-- **Assigned to**: Isaiah Alfred, Derrick Larkins
-
-### Part 8: Background Processing
-- **Responsibilities**: [Description]
-- **Assigned to**: Carter Mason, Derrick Larkins
-
-### Part 9: Internal Command Execution
-- **Responsibilities**: [Description]
-- **Assigned to**: Derrick Larkins, Isaiah Alfred
-
-### Part 10: External Timeout Executable
-- **Responsibilities**: [Description]
-- **Assigned to**: Derrick Larkins, Carter Mason
-
-### Extra Credit
-- **Responsibilities**: [Description]
-- **Assigned to**: Pipes + Redirection: Isaiah Alfred, Carter Mason
-- Unlimited Pipes: Carter Mason, Derrick Larkins
-- Shell-ception: Derrick Larkins, Isaiah Alfred
-
+---
 
 ## File Listing
-```
-shell/
-│
-├── src/
-│ ├── main.c
-│ └── shell.c
-│
-├── include/
-│ └── shell.h
-│
-├── README.md
-└── Makefile
-```
-## How to Compile & Execute
+.
+├── Makefile # Build rules for compiling and running tests
+├── README.md # Project documentation
+├── bin/ # Compiled executables
+│ └── c_tests # Executable for C tests
+├── include/ # Header files
+│ ├── builtins.h # Built-in command declarations
+│ ├── exec.h # Execution functions and exec options
+│ ├── jobs.h # Job control structures/functions
+│ ├── lexer.h # Lexer declarations
+│ ├── parser.h # Parser declarations
+│ └── prompt.h # Prompt handling declarations
+├── src/ # Source files
+│ ├── builtins.c # Implementation of built-in shell commands
+│ ├── exec.c # Core execution functions
+│ ├── expand.c # Environment/tilde expansion helpers
+│ ├── jobs.c # Background job tracking
+│ ├── lexer.c # Lexical analysis for command input
+│ ├── main.c # Entry point of the shell
+│ ├── parser.c # Parse input into pipeline structures
+│ ├── pipe.c # Pipe setup logic
+│ ├── pipeline_exec.c # Execute pipelines of commands
+│ ├── prompt.c # Display and manage shell prompt
+│ └── redir.c # Redirection handling
+└── tests/ # Unit and functional tests
+├── a_tests.c # Person-A tests (prompt/lexer/parser)
+├── b_tests.c # Person-B tests (builtins)
+├── c_tests.c # Person-C tests (exec/pipeline/jobs)
+└── tmp/ # Temporary output files used by tests
+├── basic.txt
+├── bytes.txt
+├── count.txt
+├── env.txt
+├── in.txt
+├── jobs.txt
+├── out.txt
+├── pwdlen.txt
+├── redir.txt
+└── tilde.txt
 
-### Requirements
-- **Compiler**: e.g., `gcc` for C/C++, `rustc` for Rust.
-- **Dependencies**: List any libraries or frameworks necessary (rust only).
+yaml
+Copy code
 
-### Compilation
-For a C/C++ example:
+---
+
+## How to Compile and Run
+To compile everything:
 ```bash
 make
-```
-This will build the executable in ...
-### Execution
-```bash
-make run
-```
-This will run the program ...
+To run individual test suites:
 
-## Development Log
-Each member records their contributions here.
+bash
+Copy code
+make atest   # Run Person-A tests
+make btest   # Run Person-B tests
+make ctest   # Run Person-C tests
+To clean build artifacts:
 
-### [Member 1]
+bash
+Copy code
+make clean
+Known Bugs / Unfinished Portions
+Currently, tilde_expansion and builtin_jobs tests fail.
 
-| Date       | Work Completed / Notes |
-|------------|------------------------|
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
+mkdir_p_for_file has issues on WSL when resolving /mnt/... paths. This may cause redirection tests to fail.
 
-### [Member 2]
+All other features (env expansion, cd, exit, pipelines, background jobs) pass successfully.
 
-| Date       | Work Completed / Notes |
-|------------|------------------------|
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
+Development Log
+Isaiah Alfred: Implemented execution path resolution, redirection handling, and debugging pipeline_exec.c.
 
+Teammate 2: Focused on parsing logic and error handling in parser.c.
 
-### [Member 3]
+Teammate 3: Handled builtin commands, Makefile integration, and test verification.
 
-| Date       | Work Completed / Notes |
-|------------|------------------------|
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
-| YYYY-MM-DD | [Description of task]  |
+Group Meetings
+Weekly sync during recitations to split up implementation tasks.
 
+Debugging sessions held before deadlines to integrate all components and resolve linker/compiler issues.
 
-## Meetings
-Document in-person meetings, their purpose, and what was discussed.
+Special Considerations
+The project was developed in WSL (Ubuntu on Windows). File path behavior (/mnt/...) differs slightly from linprog, but the project compiles and runs under standard POSIX/Linux environments.
 
-| Date       | Attendees            | Topics Discussed | Outcomes / Decisions |
-|------------|----------------------|------------------|-----------------------|
-| YYYY-MM-DD | [Names]              | [Agenda items]   | [Actions/Next steps]  |
-| YYYY-MM-DD | [Names]              | [Agenda items]   | [Actions/Next steps]  |
-
-
-
-## Bugs
-- **Bug 1**: This is bug 1.
-- **Bug 2**: This is bug 2.
-- **Bug 3**: This is bug 3.
-
-## Extra Credit
-- **Extra Credit 1**: [Extra Credit Option]
-- **Extra Credit 2**: [Extra Credit Option]
-- **Extra Credit 3**: [Extra Credit Option]
-
-## Considerations
-[Description]
+All binaries are located in the bin/ directory. No object files or executables are committed.
